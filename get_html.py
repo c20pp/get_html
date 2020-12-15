@@ -281,6 +281,14 @@ def getHtmlbyURL(url:str, filename:str)->str:
 
 # get html段階のメインの実行関数
 # ドメイン毎にhtmlを取得し、返す。保存するなどして高速化を図っている
+# 返り値の型
+# {
+#   "{domain}":
+#       {
+#           "texts":[] // html(str)の配列
+#           "label" 0 or 1 // 1がgood, 0がbad
+#       }
+# }
 def getHTML()->Dict[str,List[str]]:
     # ドメイン毎の取得用の各種データ
     contents = [
@@ -292,6 +300,7 @@ def getHTML()->Dict[str,List[str]]:
             "auto_type":"sejuku",
             "upper_bound": 200, # 200以外が返ってくるまで続ける、そのうえで(安全性のために)上限をつける
             "lower_bound": 2,
+            "label": 0, # bad
         },
         {
             "name": "techacademy",
@@ -300,7 +309,8 @@ def getHTML()->Dict[str,List[str]]:
             "auto_url":"https://techacademy.jp/magazine/category/programming/page/",
             "auto_type":"techacademy",
             "upper_bound": 200, # 200以外が返ってくるまで続ける、そのうえで(安全性のために)上限をつける
-            "lower_bound": 2, 
+            "lower_bound": 2,
+            "label": 0, # bad
         },
         {
             "name": "qiita",
@@ -309,7 +319,8 @@ def getHTML()->Dict[str,List[str]]:
             "auto_url":"https://us-central1-qiita-trend-web-scraping.cloudfunctions.net/qiitaScraiping/daily/",
             "auto_type":"qiita",
             "upper_bound": 0,
-            "lower_bound": 0, 
+            "lower_bound": 0,
+            "label": 1, # good
         },
         {
             "name": "zenn",
@@ -319,6 +330,7 @@ def getHTML()->Dict[str,List[str]]:
             "auto_type":"zenn",
             "upper_bound": 120,
             "lower_bound": 2,
+            "label": 1, # good
         },
         {
             "name": "tohoho",
@@ -327,6 +339,7 @@ def getHTML()->Dict[str,List[str]]:
             "auto_type": "tohoho",
             "upper_bound": 0,
             "lower_bound": 0,
+            "label": 1, # good
         },
         
     ]
@@ -347,23 +360,25 @@ def getHTML()->Dict[str,List[str]]:
     # tmp = getHtmlbyURL(urls[0],fileName(content['name'],path_prefix,urls[0][len("https://qiita.com/"):],))
     # print(len(tmp))
 
-    res:Dict[str,List[str]] = {} # 返り値
+    res = {} # 返り値
     number_of_get_html = 10 # ドメイン毎のhtml取得数
     for content in contents:
         print(content)
-        res[content['domain']] = []
+        res[content['domain']] = {}
+        res[content['domain']]['texts'] = []
+        res[content['domain']]['label'] = content['label']
         urls = autoGetUrl(content["auto_url"],content["name"],number_of_get_html,content["upper_bound"],content["lower_bound"],path_prefix)
         if content["name"]=='tohoho': # tohohoは全ファイル保存済
             for url in urls:
                 print(f'{datetime.datetime.today()}: {url._str}')
                 with url.open(encoding='utf-8') as f:
-                    res[content['domain']].append(f.read())
+                    res[content['domain']]['texts'].append(f.read())
         else:
             for url in urls:
                 print(f'{datetime.datetime.today()}: {url}')
                 filename = fileName(content["name"],path_prefix,url[len(content["article_url"]):])
                 html_code = getHtmlbyURL(url,filename)
-                res[content['domain']].append(html_code)
+                res[content['domain']]['texts'].append(html_code)
     return res
 
 
@@ -376,4 +391,6 @@ if __name__=="__main__":
     # 動作確認
     for v in gotHTML:
         print(v)
-        print(len(gotHTML[v]))
+        print(gotHTML[v]['label'])
+        print(len(gotHTML[v]['texts']))
+        
