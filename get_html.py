@@ -376,4 +376,4 @@ if __name__=="__main__":
     # 動作確認
     for v in gotHTML:
         print(v)
-        print(len(a[v]))
+        print(len(gotHTML[v]))
