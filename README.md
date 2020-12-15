@@ -1,7 +1,7 @@
 # get_html
 html取得
 
-# date
+# data
 
 ./data/{domain}
 は一回実行すると保存されますが、実行時間が1時間以上かかるためdriveからダウンロードして設置すると速いです。
