@@ -1,0 +1,379 @@
+# get html
+from os import error
+from re import L
+from sys import path
+from bs4.builder import HTML
+import requests
+import time
+from pathlib import Path
+from typing import Dict,List
+from bs4 import BeautifulSoup, element
+import random
+import datetime
+import json
+import pandas as pd
+
+# ディレクトリ名からディレクトリのパス(str)を返す
+# name: ディレクトリ名
+# prefix: ローカル環境とリモート環境(コラボ)でのパスの違いを管理
+def dirsName(name: str, prefix: str):
+    return f"{prefix}data/{name}/"
+
+# ファイル名から自動取得用のファイルのパス(str)を返す
+# name: ファイル名
+# prefix: ローカル環境とリモート環境(コラボ)でのパスの違いを管理
+# extension: ファイルの拡張子
+def auto_filename(name: str, prefix: str, extension:str='txt'):
+    return f"{dirsName(name,prefix)}auto_list.{extension}"
+
+# ディレクトリ名とファイル名からファイルのパス(str)を返す
+# name: ディレクトリ名(ドメイン)
+# prefix: ローカル環境とリモート環境(コラボ)でのパスの違いを管理
+# id: ファイル名(記事id)
+# extension: ファイルの拡張子
+def fileName(name: str, prefix: str, id: str, extension: str="html")->str:
+    return dirsName(name, prefix) + id.replace('/','_') + "." + extension #idの階層がローカルの階層にならないように'/'を'_'に変換
+
+# 記事のurlと記事のidからGET用のurlを返す
+# article_url: 記事アクセス用のurlのid以外の共通する部分
+# article_id: 記事id
+def urlName(article_url: str, article_id: str)->str:
+    return article_url + article_id
+
+# dateから年月日をyyyy-mm-dd形式で返す
+# date: datetime.date型
+def yyyymmdd(date:datetime.date):
+    yyyy = f"0000{date.year}"[-4:]
+    mm = f"00{date.month}"[-2:]
+    dd = f"00{date.day}"[-2:]
+    return f"{yyyy}-{mm}-{dd}"
+
+# ディレクトリ構造に格納されたhtmlファイルを再帰的に取得
+# tohohoは全記事をダウンロードして階層構造で保存しているため
+# root: 記事の親のパス(Path)
+def get_all_path(root:Path):
+    if not root.is_dir():
+        return
+    res = []
+    for x in root.iterdir():
+        if x.is_dir():
+            res.extend(get_all_path(x))
+        elif x.suffix=='.htm' or x.suffix=='.html':
+            res.append(x)
+    return res
+
+# auto_type毎にauto_num個をauto_urlもしくは保存先からhtmlを取得
+# 【注意事項】一覧取得の際にfor分を回す場合は、対象サイトの規約を読んだうえで必ずsleepを挟み、できれば想定外(200以外など)のresponse場合breakするようにしてください
+# また小さいテストをして動作を確認してから動かしてください
+# auto_url: url一覧を自動取得する用のurl、auto_url + 'id'で記事一覧(大抵1ページごとに20記事程度)をGETする対象のURLを取得
+# auto_type: 自動取得の種類の区別、現状実質全て区別しているが将来的にまとめるかもしれない
+# auto_num: 返り値の自動取得するurl数
+# lower_bound: 'id'が数字の場合、idの下限
+# upper_bound: 'id'が数字の場合、idの上限、
+# idを[lower_bound,uppper_bound)で回すが200以外が返ってくると止めるようにするため、厳密に指定する必要はない
+# path_prefix: ローカル環境とリモート環境(コラボ)でのパスの違いを管理
+def autoGetUrl(auto_url:str ,auto_type:str, auto_num:int, upper_bound:int,lower_bound:int,path_prefix:str)->List[str]:
+    res:List[str] = [] # 返り値 
+    store:List[str] = [] # urlを全列挙する際の格納先
+    if auto_type=='sejuku':
+        filename = auto_filename(auto_type, path_prefix) # ローカル保存用のパス(str)
+        file_path = Path(filename) # ローカル保存用のパス(Path)
+        print(filename)
+        print(file_path.exists())
+        if not file_path.exists(): # ローカルで保存していなかった場合
+            for i in range(lower_bound,upper_bound): # idを[lower_bound,uppper_bound)で回す
+                auto_urlname = auto_url + str(i)
+                auto_html = requests.get(auto_urlname)
+                if auto_html.status_code != 200: # 200以外のステータスの場合終了する(記事一覧のページ番号末尾まで取得)
+                    print(f'{auto_type} finish {i}')
+                    break
+                time.sleep(3)
+                auto_html_code = auto_html.content.decode('utf-8') #getしたhtml(string)
+                auto_soup = BeautifulSoup(auto_html_code)
+                tmp = auto_soup.select(".main-box-inside .image > a") # .main-box-insideクラスの内側のimageクラスの子のaタグを抽出
+                print(i,len(tmp))
+                for v in tmp:
+                    store.append(v.attrs["href"])
+            dir_path = Path(dirsName(auto_type,path_prefix))
+            if not dir_path.exists():
+                    dir_path.mkdir(mode=0o777,parents=True,exist_ok=False) # ディレクトリを作成
+            with open(filename, mode='w',encoding='utf-8') as f:
+                for v in store:
+                    f.write(v+'\n')
+        else:
+            with file_path.open(mode='r') as f:
+                r = f.read()
+                store = r.split('\n')[0:-1]
+        sum = len(store)
+        if sum < auto_num:
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
+    elif auto_type=='techacademy':
+        filename = auto_filename(auto_type, path_prefix) # ローカル保存用のファイル名
+        file_path = Path(filename)
+        print(filename)
+        print(file_path.exists())
+        if not file_path.exists():
+            for i in range(lower_bound,upper_bound):
+                auto_urlname = auto_url + str(i)
+                auto_html = requests.get(auto_urlname)
+                if auto_html.status_code != 200:
+                    print(f'{auto_type} finish {i}')
+                    break
+                time.sleep(3)
+                auto_html_code = auto_html.content.decode('utf-8') #getしたhtml(string)、後で知ったがauto_html.textでよい
+                auto_soup = BeautifulSoup(auto_html_code)
+                tmp = auto_soup.select(".content .entry-eyecatch > a") # .main-box-insideクラスの内側のimageクラスの子のaタグを抽出
+                print(i,len(tmp))
+                for v in tmp:
+                    store.append(v.attrs["href"])
+            dir_path = Path(dirsName(auto_type,path_prefix))
+            if not dir_path.exists():
+                    dir_path.mkdir(mode=0o777,parents=True,exist_ok=False) # ディレクトリを作成
+            with open(filename, mode='w',encoding='utf-8') as f:
+                for v in store:
+                    f.write(v+'\n')
+        else:
+            with file_path.open(mode='r') as f:
+                r = f.read()
+                store = r.split('\n')[0:-1]
+        sum = len(store)
+        if sum < auto_num:
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
+    elif auto_type=='qiita': # いいね数apiからdaily ranking top 30を取得して累計3000(重複を許さず)に到達するまで一日ずつ遡る
+        filename = auto_filename(auto_type, path_prefix) # ローカル保存用のファイル名
+        file_path = Path(filename)
+        print(filename)
+        print(file_path.exists())
+        ub = 3000 # 取得urlの上限
+        url_set = set() # 重複を許さずにurlを格納するデータ構造
+        if not file_path.exists():
+            # APIがYYYY-MM-DD形式
+            date = datetime.datetime.today()-datetime.timedelta(days=2) # 一昨日の日付から遡って取得(昨日からだと実行するタイミング次第(日付変更直後)で存在しない場合がある)
+            stop = datetime.datetime(2018,9,23) # 日付の制限(これより前は存在しない)
+            while date>=stop and len(url_set)<=ub:
+                ymd = yyyymmdd(date) ## YYYY-MM-DD形式(0埋め)
+                print(f"date:{ymd}",end='\t')
+                auto_urlname = auto_url + ymd
+                response = requests.get(auto_urlname) # get API
+                if response.status_code!=200: # 200以外だったら終了
+                    print(f'{auto_type} finish {date}')
+                    break
+                time.sleep(5)
+                json_data = json.loads(response.text)['data'] # jsonを読み込んで、'data'を抽出
+                for v in json_data:
+                    url_set.add(v["url"]) # urlを抽出、重複を許さず
+                print(f"size:{len(url_set)}") # 経過出力
+                date -= datetime.timedelta(days=1) # 一日遡る
+            store = list(url_set)
+            dir_path = Path(dirsName(auto_type,path_prefix))
+            if not dir_path.exists():
+                    dir_path.mkdir(mode=0o777,parents=True,exist_ok=False) # ディレクトリを作成
+            with open(filename, mode='w',encoding='utf-8') as f:
+                for v in store:
+                    f.write(v+'\n')
+        else:
+            with file_path.open(mode='r') as f:
+                r = f.read()
+                store = r.split('\n')[0:-1]
+        sum = len(store) # 記事一覧の個数
+        if sum < auto_num: # 記事一覧の個数よりも取得個数が多い場合エラー
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
+    elif auto_type=='zenn': # 記事一覧から全記事のurlと☆数を取得してall time rankingを作成する
+        filename = auto_filename(auto_type, path_prefix, 'csv') # ローカル保存用のファイル名
+        file_path = Path(filename)
+        print(filename)
+        print(file_path.exists())
+        url_set = dict() # 取得ごとに3秒休むと、記事が新規追加されて一覧のページがずれるので、重複が発生する。そのため重複を除去するデータ構造
+        if not file_path.exists(): # all_list.csv(☆数トップ3000の記事のurl一覧)が存在しない場合、all_list.csvを作成する
+            for i in range(lower_bound,upper_bound): # 全記事のurlと☆数を抽出
+                auto_urlname = auto_url + str(i)
+                auto_html = requests.get(auto_urlname)
+                if auto_html.status_code != 200:
+                    print(f'{auto_type} finish {i}')
+                    break
+                time.sleep(3)
+                auto_html_code = auto_html.text #getしたhtml(string)
+                auto_soup = BeautifulSoup(auto_html_code)
+                if len(auto_soup.select('.error_status__1HzcU'))>0: # 404の表示
+                    break
+                for article in auto_soup.select(".ArticleListItem_container__1TunJ"):
+                    tmp = []
+                    link = article.select(".ArticleListItem_link__WbSan") # ArticleListItem_link__WbSanクラスを抽出(リンク用)
+                    like = article.select(".ArticleListItem_like__3BdyY") # ArticleListItem_like__3BdyYクラスを抽出(☆用)
+                    tmp.append("https://zenn.dev"+link[0].attrs["href"])
+                    if len(like)==0:
+                        tmp.append(0)
+                    else:
+                        tmp.append(int(like[0].text))
+                    url_set[tmp[0]] = tmp[1]
+                print(i)
+            for v in url_set: # [[url,☆数],...]で二重配列
+                tmp = []
+                tmp.append(v)
+                tmp.append(url_set[v])
+                store.append(tmp)
+            store.sort(key=lambda x:x[1],reverse=True) # ☆数の多い順でソート
+            dir_path = Path(dirsName(auto_type,path_prefix))
+            if not dir_path.exists():
+                    dir_path.mkdir(mode=0o777,parents=True,exist_ok=False) # ディレクトリを作成
+            with open(filename, mode='w',encoding='utf-8') as f:
+                f.write('url, like\n')
+                for v in store:
+                    f.write(f'{v[0]}, {v[1]}\n') # ☆数で閾値を設けたくなるかもしれないので保存
+        
+        store = pd.read_csv(filename)['url'].to_list()[:1000] # 上位1000位まで
+        sum = len(store)
+        if sum < auto_num:
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
+    elif auto_type=='tohoho':
+        # とほほは全データで10MB程度なのでディレクトリ構造ごとすべて保存していることを前提とする
+        root_path = Path(dirsName('www_20181111',path_prefix))
+        # root直下のhtmlファイルはホームページの案内等なので、root下のディレクトリ以下にあるhtmlファイルを抽出
+        dir_list = [x for x in root_path.iterdir() if root_path.is_dir() and x.is_dir()]
+        path_list = []
+        for x in dir_list:
+            path_list.extend(get_all_path(x))
+        print(len(path_list)) # 742個
+        if len(path_list) < auto_num:
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(path_list)
+        extracted_url = path_list[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
+    return res
+
+# ファイル名がfilenameのものが存在しない場合、urlで指定した記事を取得し、filenameに保存し、html(str)を返す
+# 存在する場合、html(str)を返す
+# url: 取得するURL(str)
+# filename: ファイルのパス(str)
+def getHtmlbyURL(url:str, filename:str)->str:
+    res:str
+    file_path = Path(filename)
+    if not file_path.exists(): # 1回getしたらローカルに保存して、複数回getしない
+        html = requests.get(url) # getしたhtml(bytes)
+        html_code = html.content.decode('utf-8') #getしたhtml(string)
+        dir_path = file_path.parent
+        if not dir_path.exists():
+            dir_path.mkdir(mode=0o777,parents=True,exist_ok=False) # ディレクトリを作成
+        with open(filename, mode='w', encoding='utf-8') as f:
+            f.write(html_code) # ローカルに保存
+        time.sleep(3) # インターバル
+    with open(filename, mode='r', encoding='utf-8') as f:
+        html_code = f.read()
+        res = html_code
+    return res
+
+# get html段階のメインの実行関数
+# ドメイン毎にhtmlを取得し、返す。保存するなどして高速化を図っている
+def getHTML()->Dict[str,List[str]]:
+    # ドメイン毎の取得用の各種データ
+    contents = [
+        {
+            "name": "sejuku",
+            "domain":"https://www.sejuku.net/",
+            "article_url":"https://www.sejuku.net/blog/",
+            "auto_url":"https://www.sejuku.net/blog/archive/page/",
+            "auto_type":"sejuku",
+            "upper_bound": 200, # 200以外が返ってくるまで続ける、そのうえで(安全性のために)上限をつける
+            "lower_bound": 2,
+        },
+        {
+            "name": "techacademy",
+            "domain":"https://techacademy.jp/",
+            "article_url":"https://techacademy.jp/magazine/",
+            "auto_url":"https://techacademy.jp/magazine/category/programming/page/",
+            "auto_type":"techacademy",
+            "upper_bound": 200, # 200以外が返ってくるまで続ける、そのうえで(安全性のために)上限をつける
+            "lower_bound": 2, 
+        },
+        {
+            "name": "qiita",
+            "domain": "https://qiita.com/",
+            "article_url": "https://qiita.com/",
+            "auto_url":"https://us-central1-qiita-trend-web-scraping.cloudfunctions.net/qiitaScraiping/daily/",
+            "auto_type":"qiita",
+            "upper_bound": 0,
+            "lower_bound": 0, 
+        },
+        {
+            "name": "zenn",
+            "domain": "https://zenn.dev/",
+            "article_url": "https://zenn.dev/", # https://zenn.dev/[userid]/articles/[articleid]
+            "auto_url":"https://zenn.dev/articles?page=",
+            "auto_type":"zenn",
+            "upper_bound": 120,
+            "lower_bound": 2,
+        },
+        {
+            "name": "tohoho",
+            "domain": "http:" "http://www.tohoho-web.com/",
+            "auto_url": "",
+            "auto_type": "tohoho",
+            "upper_bound": 0,
+            "lower_bound": 0,
+        },
+        
+    ]
+    # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
+    environment = 'local'
+    #environment = 'debug'
+    #environment = 'share'
+    if environment =='local':
+        path_prefix = './'
+    elif environment == 'debug':
+        path_prefix = './scraping/'
+    else:
+        path_prefix = '/content/drive/Shareddrives/システム設計構築演習/'
+   
+    # デバッグで追加したcontentだけ実行したい時用(残したままだと以降のランダム取得がずれるので、注意)
+    # content = contents[4]
+    # urls = autoGetUrl(content["auto_url"],content["name"],10,content["upper_bound"],content["lower_bound"],path_prefix)
+    # tmp = getHtmlbyURL(urls[0],fileName(content['name'],path_prefix,urls[0][len("https://qiita.com/"):],))
+    # print(len(tmp))
+
+    res:Dict[str,List[str]] = {} # 返り値
+    number_of_get_html = 10 # ドメイン毎のhtml取得数
+    for content in contents:
+        print(content)
+        res[content['domain']] = []
+        urls = autoGetUrl(content["auto_url"],content["name"],number_of_get_html,content["upper_bound"],content["lower_bound"],path_prefix)
+        if content["name"]=='tohoho': # tohohoは全ファイル保存済
+            for url in urls:
+                print(f'{datetime.datetime.today()}: {url._str}')
+                with url.open(encoding='utf-8') as f:
+                    res[content['domain']].append(f.read())
+        else:
+            for url in urls:
+                print(f'{datetime.datetime.today()}: {url}')
+                filename = fileName(content["name"],path_prefix,url[len(content["article_url"]):])
+                html_code = getHtmlbyURL(url,filename)
+                res[content['domain']].append(html_code)
+    return res
+
+
+
+
+if __name__=="__main__":
+    random.seed(0)
+    #autoGetHtml('https://www.sejuku.net/blog/archive/page/', 'sejuku', 3, 3, 2)
+    gotHTML = getHTML()
+    # 動作確認
+    for v in gotHTML:
+        print(v)
+        print(len(a[v]))
