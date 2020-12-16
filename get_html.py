@@ -7,11 +7,12 @@ import requests
 import time
 from pathlib import Path
 from typing import Dict,List
-from bs4 import BeautifulSoup, element
+from bs4 import BeautifulSoup, element, BeautifulStoneSoup
 import random
 import datetime
 import json
 import pandas as pd
+#import xml.etree.ElementTree as ET
 
 # ディレクトリ名からディレクトリのパス(str)を返す
 # name: ディレクトリ名
@@ -32,7 +33,7 @@ def auto_filename(name: str, prefix: str, extension:str='txt'):
 # id: ファイル名(記事id)
 # extension: ファイルの拡張子
 def fileName(name: str, prefix: str, id: str, extension: str="html")->str:
-    return dirsName(name, prefix) + id.replace('/','_') + "." + extension #idの階層がローカルの階層にならないように'/'を'_'に変換
+    return dirsName(name, prefix) + id.replace('/','_').replace('.','_') + "." + extension #idの階層がローカルの階層にならないように'/'を'_'に変換,拡張子付きのサイト用に'.'を'_'に変換
 
 # 記事のurlと記事のidからGET用のurlを返す
 # article_url: 記事アクセス用のurlのid以外の共通する部分
@@ -256,6 +257,34 @@ def autoGetUrl(auto_url:str ,auto_type:str, auto_num:int, upper_bound:int,lower_
         extracted_url = path_list[0:auto_num]
         for v in extracted_url:
             res.append(v)
+    elif auto_type=='cpprefjp':
+        filename = auto_filename(auto_type, path_prefix)
+        file_path = Path(filename)
+        if not file_path.exists():
+            dirname = Path(dirsName(auto_type,path_prefix))
+            if not dirname.exists():
+                dirname.mkdir(mode=0o777,parents=True,exist_ok=False)
+            auto_xml = requests.get(auto_url) # get sitemap xml
+            if auto_xml.status_code != 200:
+                raise NameError(f'status code: {auto_xml.status_code}')
+            time.sleep(3)
+            xml_text = auto_xml.text
+            auto_soup = BeautifulStoneSoup(xml_text,features="xml") # parse xml from string
+            all_loc = auto_soup.findAll('loc') # <urL>下にある<loc>を全て抽出
+            with file_path.open(mode='w',encoding='utf-8') as f:
+                for v in all_loc:
+                    f.write(v.text+'\n')
+            print(len(res))
+        with file_path.open(mode='r',encoding='utf-8') as f:
+            r = f.read()
+            store = r.split('\n')[:-1]
+        sum = len(store)
+        if sum < auto_num:
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
     return res
 
 # ファイル名がfilenameのものが存在しない場合、urlで指定した記事を取得し、filenameに保存し、html(str)を返す
@@ -267,6 +296,8 @@ def getHtmlbyURL(url:str, filename:str)->str:
     file_path = Path(filename)
     if not file_path.exists(): # 1回getしたらローカルに保存して、複数回getしない
         html = requests.get(url) # getしたhtml(bytes)
+        if html.status_code!=200:
+            raise NameError(f'status code: {html.status_code}')
         html_code = html.content.decode('utf-8') #getしたhtml(string)
         dir_path = file_path.parent
         if not dir_path.exists():
@@ -291,6 +322,13 @@ def getHtmlbyURL(url:str, filename:str)->str:
 # }
 def getHTML()->Dict[str,List[str]]:
     # ドメイン毎の取得用の各種データ
+    # name: 一意なid
+    # domain: ドメインのルートurl
+    # article_url: 記事アクセス用のurlのid以外の共通する部分
+    # auto_url: 自動取得の際のurl
+    # auto_type: 自動取得の種類
+    # upper_bound,lower_bound: ページングされているタイプのauto_urlのページの範囲 
+    # label: 0がbad,1がgood
     contents = [
         {
             "name": "sejuku",
@@ -334,9 +372,19 @@ def getHTML()->Dict[str,List[str]]:
         },
         {
             "name": "tohoho",
-            "domain": "http:" "http://www.tohoho-web.com/",
+            "domain": "http://www.tohoho-web.com/",
             "auto_url": "",
             "auto_type": "tohoho",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 1, # good
+        },
+        {
+            "name": "cpprefjp",
+            "domain": "https://cpprefjp.github.io/",
+            "article_url": "https://cpprefjp.github.io/",
+            "auto_url": "https://cpprefjp.github.io/sitemap.xml",
+            "auto_type": "cpprefjp",
             "upper_bound": 0,
             "lower_bound": 0,
             "label": 1, # good
@@ -391,6 +439,9 @@ if __name__=="__main__":
     # 動作確認
     for v in gotHTML:
         print(v)
-        print(gotHTML[v]['label'])
+        if gotHTML[v]['label']==1:
+            print('good')
+        else:
+            print('bad')
         print(len(gotHTML[v]['texts']))
         
