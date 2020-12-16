@@ -63,7 +63,7 @@ def get_all_path(root:Path):
     return res
 
 # auto_type毎にauto_num個をauto_urlもしくは保存先からhtmlを取得
-# 【注意事項】一覧取得の際にfor分を回す場合は、対象サイトの規約を読んだうえで必ずsleepを挟み、できれば想定外(200以外など)のresponse場合breakするようにしてください
+# 【注意事項】一覧取得の際にfor分を回す場合は、対象サイトの規約(robots.txtなど)を読んだうえで必ずsleepを挟み、できれば想定外(200以外など)のresponse場合breakするようにしてください
 # また小さいテストをして動作を確認してから動かしてください
 # auto_url: url一覧を自動取得する用のurl、auto_url + 'id'で記事一覧(大抵1ページごとに20記事程度)をGETする対象のURLを取得
 # auto_type: 自動取得の種類の区別、現状実質全て区別しているが将来的にまとめるかもしれない
