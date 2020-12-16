@@ -268,19 +268,25 @@ List[str]:
     elif auto_type == 'qastack':
         filename = auto_filename(auto_type, path_prefix)  # ローカル保存用のパス(str)
         file_path = Path(filename)  # ローカル保存用のパス(Path)
-        sitemap_programming = auto_url + 'sitemap/questions/10.xml'  # TODO: カテゴリ展開時に拡張する
-        xml = requests.get(sitemap_programming)
-        if xml.status_code != 200:  # サイトマップ取得時に異常
-            print(f'{auto_type} finished in getting XML')
-        xml_code = xml.content.decode('utf-8')
-        xml_soup = BeautifulSoup(xml_code)
-        links = xml_soup.select('urlset > url > loc')
-        store = [link.text for link in links]
-
+        if not file_path.exists():
+            sitemap_programming = auto_url + 'sitemap/questions/10.xml'  # TODO: カテゴリ展開時に拡張する
+            xml = requests.get(sitemap_programming)
+            if xml.status_code != 200:  # サイトマップ取得時に異常
+                print(f'{auto_type} finished in getting XML')
+            xml_code = xml.content.decode('utf-8')
+            xml_soup = BeautifulSoup(xml_code)
+            links = xml_soup.select('urlset > url > loc')
+            store = [link.text for link in links]
+            with file_path.open(mode='w',encoding='utf-8') as f:
+                for v in store:
+                    f.write(v+'\n')
+        else:
+            with file_path.open(mode='r',encoding='utf-8') as f:
+                store = f.read().split('\n')[:-1]
         print("stored:", store[0])
-
+        print(len(store))
         random.shuffle(store)
-        if len(links) < auto_num:
+        if len(store) < auto_num:
             raise NameError(f'number of all articles is less than auto_num:{auto_num}')
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -418,7 +424,7 @@ def getHTML() -> Dict[str, List[str]]:
             "auto_type": "qastack",
             "upper_bound": 0,
             "lower_bound": 0,
-            "label": 1,  # good
+            "label": 0,  # bad
         },
         {
             "name": "cpprefjp",
@@ -433,9 +439,9 @@ def getHTML() -> Dict[str, List[str]]:
         
     ]
     # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
-    # environment = 'local'
+    environment = 'local'
     # environment = 'debug'
-    environment = 'share'
+    # environment = 'share'
     if environment == 'local':
         path_prefix = './'
     elif environment == 'debug':
