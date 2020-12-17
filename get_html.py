@@ -37,7 +37,8 @@ def auto_filename(name: str, prefix: str, extension: str = 'txt'):
 # id: ファイル名(記事id)
 # extension: ファイルの拡張子
 def fileName(name: str, prefix: str, id: str, extension: str="html")->str:
-    return dirsName(name, prefix) + id.replace('/','_').replace('.','_') + "." + extension #idの階層がローカルの階層にならないように'/'を'_'に変換,拡張子付きのサイト用に'.'を'_'に変換
+    return dirsName(name, prefix) + id.translate(str.maketrans('\\:*?"<>|/.','__________')) \
+        + "." + extension #idの階層がローカルの階層にならないように'/'を'_'に変換,拡張子付きのサイト用に'.'を'_'に変換
 
 # 記事のurlと記事のidからGET用のurlを返す
 # article_url: 記事アクセス用のurlのid以外の共通する部分
