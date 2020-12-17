@@ -12,6 +12,7 @@ import random
 import datetime
 import json
 import pandas as pd
+import csv
 #import xml.etree.ElementTree as ET
 
 
@@ -320,6 +321,36 @@ List[str]:
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
+    elif auto_type=='jastackoverflow':
+        filename = auto_filename(auto_type, path_prefix)  # ローカル保存用のパス(str)
+        file_path = Path(filename)  # ローカル保存用のパス(Path)
+        # ディレクトリにja_stack_overflow.csvがあることを前提とする
+        if not file_path.exists():
+            dirname = Path(dirsName(auto_type,path_prefix))
+            if not dirname.exists():
+                dirname.mkdir(mode=0o777,parents=True,exist_ok=False)
+            # CSVからURLを取得
+            # CSVは https://data.stackexchange.com/ja/query/1348722
+            with Path(dirsName(auto_type, path_prefix)+"ja_stack_overflow.csv").open(mode='r',encoding='utf-8', newline='') as csvfile:
+                with file_path.open(mode='w',encoding='utf-8') as f:
+                    spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+                    index = 0
+                    for row in spamreader:
+                        index += 1
+                        if index==1:
+                            continue
+                        f.write(f'https://ja.stackoverflow.com/questions/{row[1]}/{row[0]}\n')
+                        #print(', '.join(row))
+        with file_path.open(mode='r',encoding='utf-8') as f:
+            r = f.read()
+            store = r.split('\n')[:-1]
+        sum = len(store)
+        if sum < auto_num:
+            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
     return res
 
 
@@ -432,6 +463,16 @@ def getHTML() -> Dict[str, List[str]]:
             "article_url": "https://cpprefjp.github.io/",
             "auto_url": "https://cpprefjp.github.io/sitemap.xml",
             "auto_type": "cpprefjp",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 1, # good
+        },
+        {
+            "name": "jastackoverflow",
+            "domain": "https://ja.stackoverflow.com/",
+            "article_url": "https://ja.stackoverflow.com/questions/", #https://ja.stackoverflow.com/questions/[ID]/
+            "auto_url": "",
+            "auto_type": "jastackoverflow",
             "upper_bound": 0,
             "lower_bound": 0,
             "label": 1, # good
