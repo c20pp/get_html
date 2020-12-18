@@ -30,6 +30,12 @@ def dirsName(name: str, prefix: str):
 def auto_filename(name: str, prefix: str, extension: str = 'txt'):
     return f"{dirsName(name, prefix)}auto_list.{extension}"
 
+# ファイル名から自動取得時の404リスト用のファイルのパス(str)を返す
+# name: ファイル名
+# prefix: ローカル環境とリモート環境(コラボ)でのパスの違いを管理
+# extension: ファイルの拡張子
+def auto_404filename(name: str, prefix: str, extension: str = 'txt'):
+    return f"{dirsName(name, prefix)}auto_404list.{extension}"
 
 # ディレクトリ名とファイル名からファイルのパス(str)を返す
 # name: ディレクトリ名(ドメイン)
@@ -116,7 +122,7 @@ List[str]:
                 store = r.split('\n')[0:-1]
         sum = len(store)
         if sum < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -152,7 +158,7 @@ List[str]:
                 store = r.split('\n')[0:-1]
         sum = len(store)
         if sum < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -196,7 +202,7 @@ List[str]:
                 store = r.split('\n')[0:-1]
         sum = len(store)  # 記事一覧の個数
         if sum < auto_num:  # 記事一覧の個数よりも取得個数が多い場合エラー
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -247,7 +253,7 @@ List[str]:
         store = pd.read_csv(filename)['url'].to_list()[:1000]  # 上位1000位まで
         sum = len(store)
         if sum < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -262,7 +268,7 @@ List[str]:
             path_list.extend(get_all_path(x))
         print(len(path_list))  # 742個
         if len(path_list) < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(path_list)
         extracted_url = path_list[0:auto_num]
         for v in extracted_url:
@@ -289,7 +295,7 @@ List[str]:
         print(len(store))
         random.shuffle(store)
         if len(store) < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
@@ -303,7 +309,7 @@ List[str]:
                 dirname.mkdir(mode=0o777,parents=True,exist_ok=False)
             auto_xml = requests.get(auto_url) # get sitemap xml
             if auto_xml.status_code != 200:
-                raise NameError(f'status code: {auto_xml.status_code}')
+                raise Exception(f'status code: {auto_xml.status_code}')
             time.sleep(3)
             xml_text = auto_xml.text
             auto_soup = BeautifulStoneSoup(xml_text,features="xml") # parse xml from string
@@ -317,7 +323,7 @@ List[str]:
             store = r.split('\n')[:-1]
         sum = len(store)
         if sum < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -347,7 +353,7 @@ List[str]:
             store = r.split('\n')[:-1]
         sum = len(store)
         if sum < auto_num:
-            raise NameError(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -365,14 +371,15 @@ def getHtmlbyURL(url: str, filename: str) -> str:
     if not file_path.exists(): # 1回getしたらローカルに保存して、複数回getしない
         html = requests.get(url) # getしたhtml(bytes)
         if html.status_code!=200:
-            raise NameError(f'status code: {html.status_code}')
+            time.sleep(6)  # インターバル
+            raise Exception(f'url: {url}, status code: {html.status_code}')
         html_code = html.content.decode('utf-8') #getしたhtml(string)
         dir_path = file_path.parent
         if not dir_path.exists():
             dir_path.mkdir(mode=0o777, parents=True, exist_ok=False)  # ディレクトリを作成
         with open(filename, mode='w', encoding='utf-8') as f:
             f.write(html_code)  # ローカルに保存
-        time.sleep(3)  # インターバル
+        time.sleep(6)  # インターバル
     with open(filename, mode='r', encoding='utf-8') as f:
         html_code = f.read()
         res = html_code
@@ -498,31 +505,62 @@ def getHTML() -> Dict[str, List[str]]:
     # print(len(tmp))
 
     res = {}  # 返り値
-    number_of_get_html = 10  # ドメイン毎のhtml取得数
+    number_of_get_html = 740  # ドメイン毎のhtml取得数
     for content in contents:
+        random.seed(0)
         print(content)
         res[content['domain']] = {}
         res[content['domain']]['texts'] = []
         res[content['domain']]['label'] = content['label']
-        urls = autoGetUrl(content["auto_url"], content["name"], number_of_get_html, content["upper_bound"],
-                          content["lower_bound"], path_prefix)
-        if content["name"] == 'tohoho':  # tohohoは全ファイル保存済
-            for url in urls:
-                print(f'{datetime.datetime.today()}: {url._str}')
-                with url.open(encoding='utf-8') as f:
-                    res[content['domain']]['texts'].append(f.read())
-        else:
-            for url in urls:
-                print(f'{datetime.datetime.today()}: {url}')
-                filename = fileName(content["name"], path_prefix, url[len(content["article_url"]):])
-                html_code = getHtmlbyURL(url, filename)
-                res[content['domain']]['texts'].append(html_code)
+        url_set = set() # ドメイン毎のhtmlが取得できたurl集合(while2周目以降で重複を除去,404の割合が十分に低いと仮定)
+        while number_of_get_html > len(url_set):
+            urls = autoGetUrl(content["auto_url"], content["name"], number_of_get_html - len(url_set), content["upper_bound"],
+                            content["lower_bound"], path_prefix)
+            auto404path = Path(auto_404filename(content['name'],path_prefix))
+            autopath = Path(auto_filename(content['name'],path_prefix))
+            with autopath.open(mode='r',encoding='utf-8') as f:
+                alllist = f.read().split('\n')[:-1]
+                all_list = str(alllist)
+            if auto404path.exists():
+                with auto404path.open(mode='r',encoding='utf-8') as f:
+                    list404 = set(f.read().split('\n')[:-1])
+                    l = len(all_list) # all_listの個数
+                    if l-len(list404) < number_of_get_html: # all_listの内404以外の個数が取得数を超えていた場合
+                        raise Exception(f'number of all articles is less than number_of_get_html:{number_of_get_html}')
+            else:
+                list404 = set()
+            if content["name"] == 'tohoho':  # tohohoは全ファイル保存済
+                for i, url in enumerate(urls):
+                    print(f'{i}, {datetime.datetime.today()}: {url._str}')
+                    with url.open(encoding='utf-8') as f:
+                        res[content['domain']]['texts'].append(f.read())
+            else:
+                for i, url in enumerate(urls):                    
+                    print(f'{i}, {datetime.datetime.today()}: {url}')
+                    filename = fileName(content["name"], path_prefix, url[len(content["article_url"]):])
+                    if url in list404:
+                        print(f'{url} include 404 list.')
+                        continue
+                    if url in url_set:
+                        print(f'{url} include used list.')
+                        continue
+                    try: # 404のときエラー
+                        html_code = getHtmlbyURL(url, filename)
+                        res[content['domain']]['texts'].append(html_code)
+                    except Exception: # 404リストに加える
+                        print(f"detect 404 not found.")
+                        with auto404path.open(mode='a',encoding='utf-8') as f:
+                            f.write(url+'\n')
+                        list404.add(url)
+                    else:
+                        url_set.add(url)
     return res
 
 
 if __name__ == "__main__":
-    random.seed(0)
+    # random.seed(0)
     # autoGetHtml('https://www.sejuku.net/blog/archive/page/', 'sejuku', 3, 3, 2)
+    randomState = random.getstate()
     gotHTML = getHTML()
     # 動作確認
     for v in gotHTML:
@@ -532,3 +570,4 @@ if __name__ == "__main__":
         else:
             print('bad')
         print(len(gotHTML[v]['texts']))
+    random.setstate(randomState)
