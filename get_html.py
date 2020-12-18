@@ -331,7 +331,7 @@ List[str]:
             if not dirname.exists():
                 dirname.mkdir(mode=0o777,parents=True,exist_ok=False)
             # CSVからURLを取得
-            # CSVは https://data.stackexchange.com/ja/query/1348893/post-with-good-answer
+            # CSVは https://data.stackexchange.com/ja/query/1348894/post-with-good-answer
             with Path(dirsName(auto_type, path_prefix)+"ja_stack_overflow.csv").open(mode='r',encoding='utf-8', newline='') as csvfile:
                 with file_path.open(mode='w',encoding='utf-8') as f:
                     spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
