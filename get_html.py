@@ -291,7 +291,7 @@ List[str]:
         else:
             with file_path.open(mode='r',encoding='utf-8') as f:
                 store = f.read().split('\n')[:-1]
-        print("stored:", store[0])
+        #print("stored:", store[0])
         print(len(store))
         random.shuffle(store)
         if len(store) < auto_num:
@@ -299,7 +299,7 @@ List[str]:
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
-        print(res)
+        #print(res)
     elif auto_type=='cpprefjp':
         filename = auto_filename(auto_type, path_prefix)
         file_path = Path(filename)
