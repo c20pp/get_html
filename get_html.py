@@ -516,25 +516,29 @@ def getHTML() -> Dict[str, List[str]]:
         while number_of_get_html > len(url_set):
             urls = autoGetUrl(content["auto_url"], content["name"], number_of_get_html - len(url_set), content["upper_bound"],
                             content["lower_bound"], path_prefix)
-            auto404path = Path(auto_404filename(content['name'],path_prefix))
-            autopath = Path(auto_filename(content['name'],path_prefix))
-            with autopath.open(mode='r',encoding='utf-8') as f:
-                alllist = f.read().split('\n')[:-1]
-                all_list = str(alllist)
-            if auto404path.exists():
-                with auto404path.open(mode='r',encoding='utf-8') as f:
-                    list404 = set(f.read().split('\n')[:-1])
-                    l = len(all_list) # all_listの個数
-                    if l-len(list404) < number_of_get_html: # all_listの内404以外の個数が取得数を超えていた場合
-                        raise Exception(f'number of all articles is less than number_of_get_html:{number_of_get_html}')
-            else:
-                list404 = set()
             if content["name"] == 'tohoho':  # tohohoは全ファイル保存済
                 for i, url in enumerate(urls):
                     print(f'{i}, {datetime.datetime.today()}: {url._str}')
                     with url.open(encoding='utf-8') as f:
                         res[content['domain']]['texts'].append(f.read())
+                    url_set.add(url)
             else:
+                auto404path = Path(auto_404filename(content['name'],path_prefix))
+                if content["name"]=='zenn':
+                    autopath = Path(auto_filename(content['name'],path_prefix,'csv'))
+                else:
+                    autopath = Path(auto_filename(content['name'],path_prefix))
+                with autopath.open(mode='r',encoding='utf-8') as f:
+                    alllist = f.read().split('\n')[:-1]
+                    all_list = str(alllist)
+                if auto404path.exists():
+                    with auto404path.open(mode='r',encoding='utf-8') as f:
+                        list404 = set(f.read().split('\n')[:-1])
+                        l = len(all_list) # all_listの個数
+                        if l-len(list404) < number_of_get_html: # all_listの内404以外の個数が取得数を超えていた場合
+                            raise Exception(f'number of all articles is less than number_of_get_html:{number_of_get_html}')
+                else:
+                    list404 = set()
                 for i, url in enumerate(urls):                    
                     print(f'{i}, {datetime.datetime.today()}: {url}')
                     filename = fileName(content["name"], path_prefix, url[len(content["article_url"]):])
