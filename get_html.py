@@ -518,7 +518,8 @@ def getHTML() -> Dict[str, List[str]]:
                             content["lower_bound"], path_prefix)
             if content["name"] == 'tohoho':  # tohohoは全ファイル保存済
                 for i, url in enumerate(urls):
-                    print(f'{i}, {datetime.datetime.today()}: {url._str}')
+                    if environment != 'share':
+                        print(f'{i}, {datetime.datetime.today()}: {url._str}')
                     with url.open(encoding='utf-8') as f:
                         res[content['domain']]['texts'].append(f.read())
                     url_set.add(url)
@@ -539,8 +540,9 @@ def getHTML() -> Dict[str, List[str]]:
                             raise Exception(f'number of all articles is less than number_of_get_html:{number_of_get_html}')
                 else:
                     list404 = set()
-                for i, url in enumerate(urls):                    
-                    print(f'{i}, {datetime.datetime.today()}: {url}')
+                for i, url in enumerate(urls):
+                    if environment != 'share':
+                        print(f'{i}, {datetime.datetime.today()}: {url}')
                     filename = fileName(content["name"], path_prefix, url[len(content["article_url"]):])
                     if url in list404:
                         print(f'{url} include 404 list.')
