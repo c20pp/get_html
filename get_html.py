@@ -488,9 +488,9 @@ def getHTML() -> Dict[str, List[str]]:
         
     ]
     # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
-    environment = 'local'
+    # environment = 'local'
     # environment = 'debug'
-    # environment = 'share'
+    environment = 'share'
     if environment == 'local':
         path_prefix = './'
     elif environment == 'debug':
