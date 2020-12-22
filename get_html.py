@@ -576,4 +576,5 @@ if __name__ == "__main__":
         else:
             print('bad')
         print(len(gotHTML[v]['texts']))
+    del gotHTML
     random.setstate(randomState)
