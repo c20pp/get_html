@@ -300,7 +300,7 @@ List[str]:
         for v in extracted_url:
             res.append(v)
         #print(res)
-    elif auto_type=='cpprefjp':
+    elif auto_type=='cpprefjp' or auto_type=='note.nkmk.me' or auto_type=='dbonline':
         filename = auto_filename(auto_type, path_prefix)
         file_path = Path(filename)
         if not file_path.exists():
@@ -323,12 +323,12 @@ List[str]:
             store = r.split('\n')[:-1]
         sum = len(store)
         if sum < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
-    elif auto_type=='jastackoverflow':
+    elif auto_type=='jastackoverflow' or auto_type=='jastackoverflow_bad':
         filename = auto_filename(auto_type, path_prefix)  # ローカル保存用のパス(str)
         file_path = Path(filename)  # ローカル保存用のパス(Path)
         # ディレクトリにja_stack_overflow.csvがあることを前提とする
@@ -338,6 +338,7 @@ List[str]:
                 dirname.mkdir(mode=0o777,parents=True,exist_ok=False)
             # CSVからURLを取得
             # CSVは https://data.stackexchange.com/ja/query/1348894/post-with-good-answer
+            # CSVは https://data.stackexchange.com/ja/query/1356039/post-with-bad-answer
             with Path(dirsName(auto_type, path_prefix)+"ja_stack_overflow.csv").open(mode='r',encoding='utf-8', newline='') as csvfile:
                 with file_path.open(mode='w',encoding='utf-8') as f:
                     spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
@@ -353,7 +354,7 @@ List[str]:
             store = r.split('\n')[:-1]
         sum = len(store)
         if sum < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+            raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -485,6 +486,36 @@ def getHTML() -> Dict[str, List[str]]:
             "lower_bound": 0,
             "label": 1, # good
         },
+        {
+            "name": "jastackoverflow_bad",
+            "domain": "jastackoverflow_bad",
+            "article_url": "https://ja.stackoverflow.com/questions/", #https://ja.stackoverflow.com/questions/[ID]/
+            "auto_url": None,
+            "auto_type": "jastackoverflow_bad",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 0, # bad
+        },
+        {
+            "name": "dbonline",
+            "domain": "https://www.dbonline.jp/",
+            "article_url": "https://www.dbonline.jp/",
+            "auto_url": "https://www.dbonline.jp/sitemap.xml",
+            "auto_type": "dbonline",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 1, # good
+        },
+        {
+            "name": "note.nkmk.me",
+            "domain": "https://note.nkmk.me/",
+            "article_url": "https://note.nkmk.me/",
+            "auto_url": "https://note.nkmk.me/sitemap.xml",
+            "auto_type": "note.nkmk.me",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 1, # good
+        },
         
     ]
     # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
@@ -505,7 +536,8 @@ def getHTML() -> Dict[str, List[str]]:
     # print(len(tmp))
 
     res = {}  # 返り値
-    number_of_get_html = 740  # ドメイン毎のhtml取得数
+    number_of_get_html = 149  # ドメイン毎のhtml取得数
+    #number_of_get_html = 740  # ドメイン毎のhtml取得数
     for content in contents:
         random.seed(0)
         print(content)
@@ -537,7 +569,7 @@ def getHTML() -> Dict[str, List[str]]:
                         list404 = set(f.read().split('\n')[:-1])
                         l = len(all_list) # all_listの個数
                         if l-len(list404) < number_of_get_html: # all_listの内404以外の個数が取得数を超えていた場合
-                            raise Exception(f'number of all articles is less than number_of_get_html:{number_of_get_html}')
+                            raise Exception(f'number of all articles:{l-len(list404)} is less than number_of_get_html:{number_of_get_html}')
                 else:
                     list404 = set()
                 for i, url in enumerate(urls):
