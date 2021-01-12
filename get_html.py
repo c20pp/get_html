@@ -359,6 +359,52 @@ List[str]:
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
+    elif auto_type=='techteacher':
+        filename = auto_filename(auto_type, path_prefix)  # ローカル保存用のパス(str)
+        file_path = Path(filename)  # ローカル保存用のパス(Path)
+        print(filename)
+        print(file_path.exists())
+        if not file_path.exists():  # ローカルで保存していなかった場合
+            # 1頁目がページングされてない
+            first_url = auto_url[:auto_url.find('page')]
+            auto_html = requests.get(first_url)
+            time.sleep(3)
+            auto_html_code = auto_html.text  # getしたhtml(string)
+            auto_soup = BeautifulSoup(auto_html_code)
+            tmp = auto_soup.select(".post-list-mag .post-list-item > a")  # .post-list-magクラスの内側のpost-list-itemクラスの子のaタグを抽出
+            for v in tmp:
+                    store.append(v.attrs["href"])
+            print(1, len(tmp))
+            for i in range(lower_bound, upper_bound):  # idを[lower_bound,uppper_bound)で回す
+                auto_urlname = auto_url + str(i)
+                auto_html = requests.get(auto_urlname)
+                if auto_html.status_code != 200:  # 200以外のステータスの場合終了する(記事一覧のページ番号末尾まで取得)
+                    print(f'{auto_type} finish {i}')
+                    break
+                time.sleep(3)
+                auto_html_code = auto_html.text  # getしたhtml(string)
+                auto_soup = BeautifulSoup(auto_html_code)
+                tmp = auto_soup.select(".post-list-mag .post-list-item > a")  # .post-list-magクラスの内側のpost-list-itemクラスの子のaタグを抽出
+                print(i, len(tmp))
+                for v in tmp:
+                    store.append(v.attrs["href"])
+            dir_path = Path(dirsName(auto_type, path_prefix))
+            if not dir_path.exists():
+                dir_path.mkdir(mode=0o777, parents=True, exist_ok=False)  # ディレクトリを作成
+            with open(filename, mode='w', encoding='utf-8') as f:
+                for v in store:
+                    f.write(v + '\n')
+        else:
+            with file_path.open(mode='r') as f:
+                r = f.read()
+                store = r.split('\n')[0:-1]
+        sum = len(store)
+        if sum < auto_num:
+            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
     return res
 
 
@@ -516,6 +562,16 @@ def getHTML() -> Dict[str, List[str]]:
             "lower_bound": 0,
             "label": 1, # good
         },
+        {
+            "name": "techteacher",
+            "domain": "https://www.tech-teacher.jp/",
+            "article_url": "https://www.tech-teacher.jp/blog/",
+            "auto_url": "https://www.tech-teacher.jp/blog/category/programming/page/",
+            "auto_type": "techteacher",
+            "upper_bound": 15,
+            "lower_bound": 2,
+            "label": 0, # bad
+        },
         
     ]
     # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
@@ -536,7 +592,8 @@ def getHTML() -> Dict[str, List[str]]:
     # print(len(tmp))
 
     res = {}  # 返り値
-    number_of_get_html = 149  # ドメイン毎のhtml取得数
+    number_of_get_html = 53  # ドメイン毎のhtml取得数
+    #number_of_get_html = 149  # ドメイン毎のhtml取得数
     #number_of_get_html = 740  # ドメイン毎のhtml取得数
     for content in contents:
         random.seed(0)
