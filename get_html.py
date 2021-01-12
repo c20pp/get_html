@@ -300,7 +300,7 @@ List[str]:
         for v in extracted_url:
             res.append(v)
         #print(res)
-    elif auto_type=='cpprefjp' or auto_type=='note.nkmk.me' or auto_type=='dbonline':
+    elif auto_type=='cpprefjp' or auto_type=='note.nkmk.me' or auto_type=='dbonline' or auto_type=='javadrive' or auto_type=='deepage': # sitemap.xmlからall_listを作成
         filename = auto_filename(auto_type, path_prefix)
         file_path = Path(filename)
         if not file_path.exists():
@@ -572,7 +572,36 @@ def getHTML() -> Dict[str, List[str]]:
             "lower_bound": 2,
             "label": 0, # bad
         },
-        
+        {
+            "name": "deepage",
+            "domain": "https://deepage.net/",
+            "article_url": "https://deepage.net/",
+            "auto_url": "https://deepage.net/sitemap.xml",
+            "auto_type": "deepage",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 0, # bad
+        },
+        {
+            "name": "javadrive",
+            "domain": "https://www.javadrive.jp/",
+            "article_url": "https://www.javadrive.jp/",
+            "auto_url": "https://www.javadrive.jp/sitemap.xml",
+            "auto_type": "javadrive",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 0, # bad
+        },
+        # {
+        #     "name": "headboost",
+        #     "domain": "https://www.headboost.jp/",
+        #     "article_url": "https://www.headboost.jp/",
+        #     "auto_url": "https://www.headboost.jp/sitemap.xml",
+        #     "auto_type": "headboost",
+        #     "upper_bound": 0,
+        #     "lower_bound": 0,
+        #     "label": 0, # bad
+        # },
     ]
     # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
     # environment = 'local'
