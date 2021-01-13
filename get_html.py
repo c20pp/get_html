@@ -405,6 +405,35 @@ List[str]:
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
+    elif auto_type=='headboost':  # sitemap.xmlからall_listを作成, 画像のurlを除外
+        filename = auto_filename(auto_type, path_prefix)
+        file_path = Path(filename)
+        if not file_path.exists():
+            dirname = Path(dirsName(auto_type,path_prefix))
+            if not dirname.exists():
+                dirname.mkdir(mode=0o777,parents=True,exist_ok=False)
+            auto_xml = requests.get(auto_url) # get sitemap xml
+            if auto_xml.status_code != 200:
+                raise Exception(f'status code: {auto_xml.status_code}')
+            time.sleep(3)
+            xml_text = auto_xml.text
+
+            auto_soup = BeautifulStoneSoup(xml_text,features="lxml-xml") # parse xml from string
+            all_loc = auto_soup.select('url > loc') # <urL>下にある<loc>を全て抽出
+            with file_path.open(mode='w',encoding='utf-8') as f:
+                for v in all_loc:
+                    f.write(v.text+'\n')
+            print(len(res))
+        with file_path.open(mode='r',encoding='utf-8') as f:
+            r = f.read()
+            store = r.split('\n')[:-1]
+        sum = len(store)
+        if sum < auto_num:
+            raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
+        random.shuffle(store)
+        extracted_url = store[0:auto_num]
+        for v in extracted_url:
+            res.append(v)
     return res
 
 
@@ -592,16 +621,16 @@ def getHTML() -> Dict[str, List[str]]:
             "lower_bound": 0,
             "label": 0, # bad
         },
-        # {
-        #     "name": "headboost",
-        #     "domain": "https://www.headboost.jp/",
-        #     "article_url": "https://www.headboost.jp/",
-        #     "auto_url": "https://www.headboost.jp/sitemap.xml",
-        #     "auto_type": "headboost",
-        #     "upper_bound": 0,
-        #     "lower_bound": 0,
-        #     "label": 0, # bad
-        # },
+        {
+            "name": "headboost",
+            "domain": "https://www.headboost.jp/",
+            "article_url": "https://www.headboost.jp/",
+            "auto_url": "https://www.headboost.jp/sitemap.xml",
+            "auto_type": "headboost",
+            "upper_bound": 0,
+            "lower_bound": 0,
+            "label": 0, # bad
+        },
     ]
     # 環境指定用変数、パスの先頭部分を変更する。わざわざ実行時引数で指定するの面倒だったので変数で指定、各自の環境に合わせて追加・変更してください
     # environment = 'local'
