@@ -121,8 +121,9 @@ List[str]:
                 r = f.read()
                 store = r.split('\n')[0:-1]
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -157,8 +158,9 @@ List[str]:
                 r = f.read()
                 store = r.split('\n')[0:-1]
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -201,8 +203,9 @@ List[str]:
                 r = f.read()
                 store = r.split('\n')[0:-1]
         sum = len(store)  # 記事一覧の個数
-        if sum < auto_num:  # 記事一覧の個数よりも取得個数が多い場合エラー
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -252,8 +255,9 @@ List[str]:
 
         store = pd.read_csv(filename)['url'].to_list()[:1000]  # 上位1000位まで
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -294,8 +298,9 @@ List[str]:
         #print("stored:", store[0])
         print(len(store))
         random.shuffle(store)
-        if len(store) < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
             res.append(v)
@@ -322,8 +327,9 @@ List[str]:
             r = f.read()
             store = r.split('\n')[:-1]
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -353,8 +359,9 @@ List[str]:
             r = f.read()
             store = r.split('\n')[:-1]
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -399,8 +406,9 @@ List[str]:
                 r = f.read()
                 store = r.split('\n')[0:-1]
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -428,8 +436,9 @@ List[str]:
             r = f.read()
             store = r.split('\n')[:-1]
         sum = len(store)
-        if sum < auto_num:
-            raise Exception(f'number of all articles:{sum} is less than auto_num:{auto_num}')
+        # if sum < auto_num:
+        #     raise Exception(f'number of all articles is less than auto_num:{auto_num}')
+        auto_num = min(sum,auto_num)
         random.shuffle(store)
         extracted_url = store[0:auto_num]
         for v in extracted_url:
@@ -653,6 +662,8 @@ def getHTML() -> Dict[str, List[str]]:
     number_of_get_html = 53  # ドメイン毎のhtml取得数
     #number_of_get_html = 149  # ドメイン毎のhtml取得数
     #number_of_get_html = 740  # ドメイン毎のhtml取得数
+    max_num_of_get_html = 200 # ドメイン毎のhtml取得数最大取得数
+    min_num_of_get_html = 53 # ドメイン毎のhtmlの最小取得数
     for content in contents:
         random.seed(0)
         print(content)
@@ -660,8 +671,8 @@ def getHTML() -> Dict[str, List[str]]:
         res[content['domain']]['texts'] = []
         res[content['domain']]['label'] = content['label']
         url_set = set() # ドメイン毎のhtmlが取得できたurl集合(while2周目以降で重複を除去,404の割合が十分に低いと仮定)
-        while number_of_get_html > len(url_set):
-            urls = autoGetUrl(content["auto_url"], content["name"], number_of_get_html - len(url_set), content["upper_bound"],
+        while max_num_of_get_html > len(url_set):
+            urls = autoGetUrl(content["auto_url"], content["name"], max_num_of_get_html - len(url_set), content["upper_bound"],
                             content["lower_bound"], path_prefix)
             if content["name"] == 'tohoho':  # tohohoは全ファイル保存済
                 for i, url in enumerate(urls):
@@ -677,14 +688,18 @@ def getHTML() -> Dict[str, List[str]]:
                 else:
                     autopath = Path(auto_filename(content['name'],path_prefix))
                 with autopath.open(mode='r',encoding='utf-8') as f:
-                    alllist = f.read().split('\n')[:-1]
-                    all_list = str(alllist)
+                    all_list = f.read().split('\n')[:-1]
+                    #all_list = str(alllist)
                 if auto404path.exists():
                     with auto404path.open(mode='r',encoding='utf-8') as f:
                         list404 = set(f.read().split('\n')[:-1])
                         l = len(all_list) # all_listの個数
-                        if l-len(list404) < number_of_get_html: # all_listの内404以外の個数が取得数を超えていた場合
-                            raise Exception(f'number of all articles:{l-len(list404)} is less than number_of_get_html:{number_of_get_html}')
+                        if l-len(list404) < min_num_of_get_html: # all_listの内404以外の個数が取得数を超えていた場合
+                            print(f'number of all articles:{l-len(list404)} is less than number_of_get_html:{min_num_of_get_html}')
+                            break
+                            #raise Exception(f'number of all articles:{l-len(list404)} is less than number_of_get_html:{min_num_of_get_html}')
+                        if l-len(list404) == len(url_set): # 全て取得済み
+                            break
                 else:
                     list404 = set()
                 for i, url in enumerate(urls):
@@ -707,6 +722,8 @@ def getHTML() -> Dict[str, List[str]]:
                         list404.add(url)
                     else:
                         url_set.add(url)
+                if len(all_list)-len(list404) == len(url_set): # 全て取得済み
+                    break
     return res
 
 
